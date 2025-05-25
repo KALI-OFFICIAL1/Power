@@ -1,6 +1,3 @@
-# ATLEAST GIVE CREDITS IF YOU STEALING :(((((((((((((((((((((((((((((((((((((
-# ELSE NO FURTHER PUBLIC THUMBNAIL UPDATES
-
 import random
 import logging
 import os
@@ -32,7 +29,7 @@ def truncate(text):
 
     text1 = text1.strip()
     text2 = text2.strip()     
-    return [text1,text2]
+    return [text1, text2]
 
 def random_color():
     return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -56,55 +53,31 @@ def add_border(image, border_width, border_color):
     new_image.paste(image, (border_width, border_width))
     return new_image
 
-def crop_center_circle(img, output_size, border, border_color, crop_scale=1.5):
-    half_the_width = img.size[0] / 2
-    half_the_height = img.size[1] / 2
+def crop_center_square(img, output_size, border, border_color, crop_scale=1.5):
+    half_width = img.size[0] / 2
+    half_height = img.size[1] / 2
     larger_size = int(output_size * crop_scale)
-    img = img.crop(
-        (
-            half_the_width - larger_size/2,
-            half_the_height - larger_size/2,
-            half_the_width + larger_size/2,
-            half_the_height + larger_size/2
-        )
-    )
-    
-    img = img.resize((output_size - 2*border, output_size - 2*border))
-    
-    
+
+    img = img.crop((
+        half_width - larger_size / 2,
+        half_height - larger_size / 2,
+        half_width + larger_size / 2,
+        half_height + larger_size / 2
+    ))
+
+    img = img.resize((output_size - 2 * border, output_size - 2 * border))
+
     final_img = Image.new("RGBA", (output_size, output_size), border_color)
-    
-    
-    mask_main = Image.new("L", (output_size - 2*border, output_size - 2*border), 0)
-    draw_main = ImageDraw.Draw(mask_main)
-    draw_main.ellipse((0, 0, output_size - 2*border, output_size - 2*border), fill=255)
-    
-    final_img.paste(img, (border, border), mask_main)
-    
-    
-    mask_border = Image.new("L", (output_size, output_size), 0)
-    draw_border = ImageDraw.Draw(mask_border)
-    draw_border.ellipse((0, 0, output_size, output_size), fill=255)
-    
-    result = Image.composite(final_img, Image.new("RGBA", final_img.size, (0, 0, 0, 0)), mask_border)
-    
-    return result
+    final_img.paste(img, (border, border))
+
+    return final_img
 
 def draw_text_with_shadow(background, draw, position, text, font, fill, shadow_offset=(3, 3), shadow_blur=5):
-    
     shadow = Image.new('RGBA', background.size, (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    
-    
     shadow_draw.text(position, text, font=font, fill="black")
-    
-    
     shadow = shadow.filter(ImageFilter.GaussianBlur(radius=shadow_blur))
-    
-    
     background.paste(shadow, shadow_offset, shadow)
-    
-    
     draw.text(position, text, font=font, fill=fill)
 
 async def gen_thumb(videoid: str):
@@ -143,10 +116,8 @@ async def gen_thumb(videoid: str):
             else:
                 channel = "Unknown Channel"
 
-        
         async with aiohttp.ClientSession() as session:
             async with session.get(thumbnail) as resp:
-        
                 content = await resp.read()
                 if resp.status == 200:
                     content_type = resp.headers.get('Content-Type')
@@ -160,36 +131,31 @@ async def gen_thumb(videoid: str):
 
                     filepath = f"cache/thumb{videoid}.png"
                     f = await aiofiles.open(filepath, mode="wb")
-                    await f.write(await resp.read())
+                    await f.write(content)
                     await f.close()
-                    # os.system(f"file {filepath}")
-                    
-        
+
         image_path = f"cache/thumb{videoid}.png"
         youtube = Image.open(image_path)
         image1 = changeImageSize(1280, 720, youtube)
-        
         image2 = image1.convert("RGBA")
         background = image2.filter(filter=ImageFilter.BoxBlur(20))
         enhancer = ImageEnhance.Brightness(background)
         background = enhancer.enhance(0.6)
 
-        
         start_gradient_color = random_color()
         end_gradient_color = random_color()
         gradient_image = generate_gradient(1280, 720, start_gradient_color, end_gradient_color)
         background = Image.blend(background, gradient_image, alpha=0.2)
-        
+
         draw = ImageDraw.Draw(background)
         arial = ImageFont.truetype("AviaxMusic/assets/font2.ttf", 30)
         font = ImageFont.truetype("AviaxMusic/assets/font.ttf", 30)
         title_font = ImageFont.truetype("AviaxMusic/assets/font3.ttf", 45)
 
-
-        circle_thumbnail = crop_center_circle(youtube, 400, 20, start_gradient_color)
-        circle_thumbnail = circle_thumbnail.resize((400, 400))
-        circle_position = (120, 160)
-        background.paste(circle_thumbnail, circle_position, circle_thumbnail)
+        square_thumbnail = crop_center_square(youtube, 400, 20, start_gradient_color)
+        square_thumbnail = square_thumbnail.resize((400, 400))
+        square_position = (120, 160)
+        background.paste(square_thumbnail, square_position, square_thumbnail)
 
         text_x_position = 565
         title1 = truncate(title)
@@ -197,8 +163,7 @@ async def gen_thumb(videoid: str):
         draw_text_with_shadow(background, draw, (text_x_position, 230), title1[1], title_font, (255, 255, 255))
         draw_text_with_shadow(background, draw, (text_x_position, 320), f"{channel}  |  {views[:23]}", arial, (255, 255, 255))
 
-
-        line_length = 580  
+        line_length = 580
         line_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
         if duration != "Live":
@@ -209,22 +174,21 @@ async def gen_thumb(videoid: str):
             start_point_color = (text_x_position, 380)
             end_point_color = (text_x_position + color_line_length, 380)
             draw.line([start_point_color, end_point_color], fill=line_color, width=9)
-        
+
             start_point_white = (text_x_position + color_line_length, 380)
             end_point_white = (text_x_position + line_length, 380)
             draw.line([start_point_white, end_point_white], fill="white", width=8)
-        
+
             circle_radius = 10 
             circle_position = (end_point_color[0], end_point_color[1])
             draw.ellipse([circle_position[0] - circle_radius, circle_position[1] - circle_radius,
-                      circle_position[0] + circle_radius, circle_position[1] + circle_radius], fill=line_color)
-    
+                          circle_position[0] + circle_radius, circle_position[1] + circle_radius], fill=line_color)
         else:
             line_color = (255, 0, 0)
             start_point_color = (text_x_position, 380)
             end_point_color = (text_x_position + line_length, 380)
             draw.line([start_point_color, end_point_color], fill=line_color, width=9)
-        
+
             circle_radius = 10 
             circle_position = (end_point_color[0], end_point_color[1])
             draw.ellipse([circle_position[0] - circle_radius, circle_position[1] - circle_radius,
@@ -232,7 +196,7 @@ async def gen_thumb(videoid: str):
 
         draw_text_with_shadow(background, draw, (text_x_position, 400), "00:00", arial, (255, 255, 255))
         draw_text_with_shadow(background, draw, (1080, 400), duration, arial, (255, 255, 255))
-        
+
         play_icons = Image.open("AviaxMusic/assets/play_icons.png")
         play_icons = play_icons.resize((580, 62))
         background.paste(play_icons, (text_x_position, 450), play_icons)
@@ -241,10 +205,11 @@ async def gen_thumb(videoid: str):
 
         background_path = f"cache/{videoid}_v4.png"
         background.save(background_path)
-        
+
         return background_path
 
     except Exception as e:
         logging.error(f"Error generating thumbnail for video {videoid}: {e}")
+        import traceback
         traceback.print_exc()
         return None
